@@ -11,7 +11,7 @@ const env = process.env.NODE_ENV || "development";
 dotenv.config({ path: `.env.${env}` });
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3001;
 const mongoURL ="mongodb+srv://mohammadqassim000:xVTcVQ2a7IA3HL0C@cluster0.s77zm.mongodb.net/";
 const dbName = process.env.DB_NAME || "pursuiter";
 
