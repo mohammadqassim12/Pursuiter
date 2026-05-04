@@ -1,111 +1,161 @@
-# Pursuiter - AI Job Application Board
+# Pursuiter
 
-- [About Persuiter](#about-persuiter)
-- [Installation](#installation)
-- [Software Architecture](#software-architecture)
-- [Contribution](#contribution)
+> A two-sided AI job board that flips the signal-to-noise ratio: applicants get pre-application feedback, recruiters get fewer-but-better-qualified applications.
 
-## About Persuiter
+---
 
-Pursuiter is a revolutionary job board designed to enhance the job application process for both applicants and employers. By providing pre-application feedback, it ensures applicants are well-prepared, enhancing their chances for success. Additionally, by requiring applicants to meet minimum criteria set by employers, it guarantees that employers receive fewer, but more qualified applications.
+## Overview
 
-## Installation
+Pursuiter is a job-application platform with a twist on both sides:
+
+- **For applicants** — paste your résumé and a job listing, and a Gemini-powered analyzer grades fit, surfaces missing skills, and suggests phrasing tweaks *before* you submit.
+- **For recruiters** — set explicit minimum criteria (skills, years, education) and only see applications that meet the bar, with the AI's notes attached.
+
+The point: cut the wasted time on both sides. Applicants stop blasting unfit roles; recruiters stop sifting through unqualified resumes.
+
+---
+
+## Why this exists
+
+Built end-to-end as a personal full-stack project to learn the MERN stack with strict architectural separation (MVC) and to integrate an LLM (Gemini) behind a swappable adapter rather than calling the SDK from controllers.
+
+---
+
+## Stack
+
+| Layer | Choice |
+|-------|--------|
+| Frontend | React 18 |
+| Backend | Node.js + Express |
+| Database | MongoDB (via Mongoose) |
+| Auth | JWT |
+| AI | Google Gemini API (behind an adapter) |
+| Tests | Jest + Supertest |
+
+---
+
+## Architecture
+
+Strict three-layer Model-View-Controller:
+
+- **Model** — Mongoose models in `/backend/models/` define the shape and validators. No business logic.
+- **View** — React components in `/frontend/src/components/` are presentation only. No data fetching or business logic.
+- **Controller** — Express controllers in `/backend/controllers/` hold all business logic. Each controller is responsible for one resource (Users, Jobs, Applications, AI).
+
+The Gemini integration sits behind a thin adapter (`/backend/ai/`) so the model provider can be swapped without touching controller code or the React app.
+
+---
+
+## Key engineering decisions
+
+1. **MVC separation as a hard rule.** No business logic in React; no presentation logic in controllers. This made the test surface easy to define — every business rule has a controller test, not a UI test.
+
+2. **AI behind an adapter.** The Gemini call lives in one place. Want to A/B test against another model? Replace one file. The controller and the UI never know.
+
+3. **Recruiter-set criteria as filters, not blockers.** Applicants still see jobs they don't quite fit (so they can grow into them) — the AI just tells them so up front. Only *submission* requires meeting the bar.
+
+4. **JWT auth with httpOnly refresh tokens.** Standard separation; refresh tokens stored httpOnly to mitigate XSS exfiltration.
+
+---
+
+## Setup
 
 ### Prerequisites
+- Node.js 22+
+- MongoDB 7+
+- Google Gemini API key
 
-- Node.js (v22.2.0): [Download Node.js](https://nodejs.org/en/download/package-manager)
-- MongoDB (v7.0.8): [Install MongoDB](https://www.mongodb.com/docs/manual/administration/install-community/)
-- MongoDB Compass: [Download MongoDB Compass GUI](https://www.mongodb.com/try/download/atlascli)
-- Add a `GEMINI_API_KEY` to the `.env` files : [Gemini API Key](https://ai.google.dev/gemini-api/docs/api-key)
+### Configure
+Create `.env` files in `/backend` and `/frontend`:
 
-### Run backend
-
-Run `cd backend` to navigate to the backend directory.
-
-1. Install dependencies
-
-```
-npm install
-```
-
-2. Setup database directory
-
-```
-mkdir data
-cd data
-mkdir db
-cd ..
+```env
+# backend/.env
+MONGO_URI=mongodb://localhost:27017/pursuiter
+JWT_SECRET=YOUR_LONG_RANDOM_SECRET
+GEMINI_API_KEY=YOUR_KEY
+PORT=5000
 ```
 
-3. Start MongoDB server. Note: command is OS specific. If `mongod` is not available globally, use the path to the executable file.
-
+```env
+# frontend/.env
+REACT_APP_API_URL=http://localhost:5000
 ```
+
+### Run
+
+```bash
+# terminal 1: MongoDB (if not running as a service)
 mongod --dbpath=./data/db
-```
 
-4. Run the application
-
-```
-npm run dev
-```
-
-### Run frontend
-
-Run `cd frontend` to navigate to the frontend directory.
-
-1. Install dependencies
-
-```
+# terminal 2: backend
+cd backend
 npm install
-```
+npm run dev
 
-2. Run the application
-
-```
+# terminal 3: frontend
+cd frontend
+npm install
 npm start
 ```
 
+App: http://localhost:3000
+
+### Test
+```bash
+cd backend
+npm test
+```
+
+---
+
 ## Screenshots
 
-*Landing Page*
-
-<img width="1728" alt="Screen Shot 2024-09-04 at 7 59 21 PM" src="https://github.com/user-attachments/assets/c08e1bdb-8565-4079-b7dc-c4a48fe04f9c">
-
-*Login*
-
-<img width="1728" alt="Screen Shot 2024-09-04 at 7 59 33 PM" src="https://github.com/user-attachments/assets/070c7a9c-e355-424d-9caf-722d2ce87ced">
+*Landing*
+![Landing](https://github.com/user-attachments/assets/c08e1bdb-8565-4079-b7dc-c4a48fe04f9c)
 
 *Applicant dashboard*
+![Applicant dashboard](https://github.com/user-attachments/assets/7c48bf33-c359-4f3b-9ca5-0e85f056887f)
 
-<img width="1720" alt="Screen Shot 2024-09-04 at 8 02 01 PM" src="https://github.com/user-attachments/assets/7c48bf33-c359-4f3b-9ca5-0e85f056887f">
+*Recruiter dashboard*
+![Recruiter dashboard](https://github.com/user-attachments/assets/594ae780-affd-4cbb-9844-d778db9a94c1)
 
-*Recruiter Dashboard*
+*Recruiter applicant view*
+![Recruiter applicant view](https://github.com/user-attachments/assets/415adc14-2915-41a9-9647-d529a92ac5a0)
 
-<img width="1728" alt="Screen Shot 2024-09-04 at 8 03 56 PM" src="https://github.com/user-attachments/assets/594ae780-affd-4cbb-9844-d778db9a94c1">
+---
 
-*Recruiter Applicant View*
+## Project structure
 
-<img width="1728" alt="Screen Shot 2024-09-04 at 8 04 53 PM" src="https://github.com/user-attachments/assets/415adc14-2915-41a9-9647-d529a92ac5a0">
+```
+Pursuiter/
+├── backend/
+│   ├── models/        # Mongoose schemas (no business logic)
+│   ├── controllers/   # Express controllers (all business logic)
+│   ├── routes/        # Route → controller wiring
+│   ├── ai/            # Gemini adapter
+│   ├── server.js      # App entry
+│   └── tests/         # Jest + Supertest
+├── frontend/
+│   └── src/
+│       ├── components/   # Presentation-only React
+│       └── api/          # Fetch wrappers
+└── README.md
+```
 
-## Software Architecture
-
-This projecy leverages the Model-View-Controller (MVC) architecture to ensure easier management and scalability of the application. Each layer of the architecture plays a distinct role:
-
-- **Model**: The model layer is managed by a backend server (`server.js`) which interacts with MongoDB. This setup handles all data logic, including data retrieval, storage, and processing.
-- **View**: The view layer consists of React components, all stored within the `components` folder. Components do not contain business logic; they solely focus on presentation and user interaction.
-- **Controller**: Controllers handle the logic necessary for processing user requests and ensuring the correct data flows back to the user interface. All controller components are stored within the `controller` folder.
+---
 
 ## Contribution
 
-### Workflow
+Branching strategy: `dev` is the integration branch; feature branches branch from `dev`, named by ticket number. PRs go to `dev`, require one peer review, and `dev` merges to `main` at sprint boundaries.
 
-- **Branching Strategy**: Our project uses a structured Git flow. All development should take place in feature branches, which should be created from the `dev` branch. Branch names must follow the format `ticketnumber`.
-- **Pull Requests (PRs)**: After completing development on a feature branch, create a pull request to the `dev` branch. The PR title should clearly state the purpose of the changes, and the description should reference the relevant issue or ticket number.
-- **Code Reviews**: At least one peer review is required for each pull request. Reviewers should ensure that the changes meet all project standards.
-- **Merging**: No direct commits to the `main` branch are allowed. At the end of each development sprint, the `dev` branch is merged into `main`. Ensure that `dev` is stable before performing the merge.
+### Code style
 
-### Coding Standards
+- React components live under `/frontend/src/components/<kebab-case>/` with a CamelCase JS + matching CSS file (e.g. `ApplicantDashboard.js` + `ApplicantDashboard.css`).
+- Express controllers live under `/backend/controllers/` with CamelCase filenames (e.g. `UserController.js`).
+- No business logic in React components; no presentation in controllers.
 
-- **Code Style**: Ensure that your code follows the existing formatting, naming conventions, and comment practices to maintain consistency across the codebase.
-- **Component Structure**: All React components should be placed in the `components` folder. Each component should have its own folder named using kebab-case (e.g., `applicant-dashboard`). Inside this folder, both the JavaScript file and its corresponding CSS file should share the same name, using CamelCase (e.g., `ApplicantDashboard.js` and `ApplicantDashboard.css`).
-- **Controller Organization**: Controllers should be stored in the `controllers` folder and named using CamelCase to reflect their functionality clearly (e.g., `UserController.js`).
+---
+
+## License
+
+Personal portfolio project.
